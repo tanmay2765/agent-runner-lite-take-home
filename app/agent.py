@@ -317,9 +317,9 @@ def _execute(tool: ToolDef, args: dict, run: Run, simulate: bool) -> tuple[Any, 
       - for `send_message`, an idempotency key is generated from the run id and the step count,
         so the same logical send always carries the same key. This is the key your TASK 4b
         implementation remembers.
-      - a ToolError is caught and turned into (error_dict, False) rather than being allowed to
-        propagate — which is how your loop gets to treat a tool failure as an observation instead
-        of a crash.
+      - a ToolError, TypeError, or ValueError is caught and turned into
+        (error_dict, False) rather than being allowed to propagate — so a
+        malformed tool call (e.g. the wrong arg type) is an observation, not a crash.
     """
     if simulate:
         return {"simulated": True, "note": "shadow mode: the side effect was not executed"}, True
@@ -329,7 +329,7 @@ def _execute(tool: ToolDef, args: dict, run: Run, simulate: bool) -> tuple[Any, 
 
     try:
         return tool.func(**args), True
-    except ToolError as exc:
+    except (ToolError, TypeError, ValueError) as exc:
         return {"error": str(exc)}, False
 
 

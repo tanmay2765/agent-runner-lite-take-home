@@ -88,3 +88,20 @@ def test_bad_credentials_fails_without_raising():
     assert result.error is not None
     assert "invalid api key" in result.error
     assert deps.model.calls == 1
+
+
+def test_malformed_write_args_are_observations_not_fatal():
+    script = [
+        '{"intent": "tool_use", "thought": "update", "tool": "update_contact",'
+        ' "args": {"contact_id": "c_1", "fields": "not-a-dict"}}',
+        '{"intent": "final", "thought": "gave up", "answer": "could not update"}',
+    ]
+    run, deps = make_run(script)
+
+    run_agent(run, deps)
+
+    assert run.status == "completed"
+    failed_results = [step for step in run.steps if step.type == "tool_result" and not step.ok]
+    assert failed_results
+    assert failed_results[0].ok is False
+    assert run.effects == []
