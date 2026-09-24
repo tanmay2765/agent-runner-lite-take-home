@@ -42,3 +42,15 @@ def test_complete_with_retry_does_not_retry_fatal_errors():
         complete_with_retry(model, messages=[{"role": "user", "content": "go"}], settings=settings)
 
     assert model.calls == 1
+
+
+def test_complete_with_retry_raises_when_retries_exhausted():
+    settings = Settings(model_max_retries=2, model_backoff_base_seconds=0)
+    model = MockModelClient(
+        [ThrottleError("429") for _ in range(settings.model_max_retries + 1)]
+    )
+
+    with pytest.raises(ThrottleError):
+        complete_with_retry(model, messages=[{"role": "user", "content": "go"}], settings=settings)
+
+    assert model.calls == settings.model_max_retries + 1

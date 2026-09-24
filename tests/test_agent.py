@@ -105,3 +105,57 @@ def test_malformed_write_args_are_observations_not_fatal():
     assert failed_results
     assert failed_results[0].ok is False
     assert run.effects == []
+
+
+def test_three_writes_stops_at_autonomous_budget():
+    run, deps = make_run(
+        SCENARIOS["three_writes"],
+        autonomy="autonomous",
+        reviewer_approves=False,
+        settings=replace(SETTINGS, max_auto_writes=1),
+    )
+
+    run_agent(run, deps)
+
+    assert len(run.effects) == 1
+    assert len(deps.workspace.messages) == 1
+    assert any("exhausted" in step.message for step in run.steps if step.type == "gate")
+
+
+def test_supervised_rejection_leaves_workspace_untouched():
+    run, deps = make_run(
+        SCENARIOS["send_followup"],
+        autonomy="supervised",
+        reviewer_approves=False,
+        expected=[ExpectedEffect(tool="send_message", match={"contact_id": "c_1"})],
+    )
+
+    run_agent(run, deps)
+
+    assert run.status == "completed"
+    assert deps.workspace.messages == []
+    assert run.effects == []
+    assert run.verdict is not None
+    assert run.verdict.passed is False
+    assert len(run.verdict.missing) == 1
+
+
+def test_tool_error_completes_with_failed_tool_result():
+    run, deps = make_run(SCENARIOS["tool_error"])
+
+    run_agent(run, deps)
+
+    assert run.status == "completed"
+    assert any(step.type == "tool_result" and not step.ok for step in run.steps)
+
+
+def test_flaky_provider_succeeds_after_retries():
+    run, deps = make_run(
+        SCENARIOS["flaky_provider"],
+        settings=replace(SETTINGS, model_backoff_base_seconds=0),
+    )
+
+    run_agent(run, deps)
+
+    assert run.status == "completed"
+    assert deps.model.calls == 3
