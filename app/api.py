@@ -54,7 +54,7 @@ class StartRunBody(BaseModel):
 
 @router.post("/runs", response_model=Run, status_code=201)
 def start_run(body: StartRunBody) -> Run:
-    """TASK 5 — TODO(candidate): start a run and return the finished result.
+    """TASK 5 — start a run and return the finished result.
 
     Small, but it's the piece that ties everything together — with this done you can drive your
     agent from the interactive docs at /docs instead of only from pytest.

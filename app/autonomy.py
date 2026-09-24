@@ -19,7 +19,7 @@ def evaluate_gate(
     writes_so_far: int,
     max_auto_writes: int = SETTINGS.max_auto_writes,
 ) -> GateDecision:
-    """TASK 1 — TODO(candidate): decide how one tool call is allowed to proceed.
+    """TASK 1 — decide how one tool call is allowed to proceed.
 
     Start here. It's the smallest task, it needs nothing else to be finished first, and it's the
     easiest thing in the project to test properly — which makes it the right place to practise

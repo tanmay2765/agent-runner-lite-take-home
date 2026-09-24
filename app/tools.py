@@ -70,7 +70,7 @@ class Workspace:
     def send_message(
         self, contact_id: str = "", body: str = "", idempotency_key: str = "", **_: Any
     ) -> dict[str, Any]:
-        """TASK 4b — TODO(candidate): make sending a message safe to call twice.
+        """TASK 4b — make sending a message safe to call twice.
 
         Here's the problem this solves. Sending a message is not like updating a field: if an
         update runs twice you end up in the same place, but if a *send* runs twice the customer

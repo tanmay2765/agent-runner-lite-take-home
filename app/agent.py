@@ -60,7 +60,7 @@ class AgentDeps:
 
 
 def run_agent(run: Run, deps: AgentDeps) -> Run:
-    """TASK 3 — TODO(candidate): drive one run from start to finish. The main event.
+    """TASK 3 — drive one run from start to finish. The main event.
 
     Do this AFTER tasks 1, 2 and 4 — this function calls all of them, and it's far easier to debug
     a loop when the pieces it uses are already tested.

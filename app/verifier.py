@@ -17,7 +17,7 @@ from app.models import Run, Task, Verdict
 
 
 def verify(task: Task, run: Run) -> Verdict:
-    """TASK 2 — TODO(candidate): diff what was expected against what happened.
+    """TASK 2 — diff what was expected against what happened.
 
     Another pure function — two objects in, a Verdict out, no I/O. Do this second.
 

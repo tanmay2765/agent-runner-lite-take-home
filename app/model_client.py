@@ -77,7 +77,7 @@ class MockModelClient:
 def complete_with_retry(
     model: ModelClient, messages: list[dict], settings: Settings = SETTINGS
 ) -> str:
-    """TASK 4a — TODO(candidate): call the model, and survive a transient failure.
+    """TASK 4a — call the model, and survive a transient failure.
 
     Networks and model providers are unreliable. Some failures are worth retrying and some are
     not, and telling them apart is the whole skill here.
