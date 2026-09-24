@@ -13,7 +13,7 @@ TASK 2: verify.
 
 from __future__ import annotations
 
-from app.models import Run, Task, Verdict
+from app.models import ExpectedEffect, Run, Task, Verdict
 
 
 def verify(task: Task, run: Run) -> Verdict:
@@ -60,8 +60,8 @@ def verify(task: Task, run: Run) -> Verdict:
 
     Write at least the first three before you write the function.
     """
-    matched: list = []
-    missing: list = []
+    matched: list[ExpectedEffect] = []
+    missing: list[ExpectedEffect] = []
     used_effect_indices: set[int] = set()
 
     for expected in task.expected_effects:
