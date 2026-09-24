@@ -110,6 +110,10 @@ Drive it from the docs UI at `http://127.0.0.1:8000/docs`: create a task with sc
 
 **Retries.** Only `ThrottleError` is retried, with `base * 2**attempt` backoff, up to `model_max_retries`. `FatalError` (and anything else) raises immediately. After retries are spent, the last `ThrottleError` propagates and the loop marks the run failed.
 
+**Malformed tool args.** `_execute` also treats `TypeError` and `ValueError` from a tool as an observation (`ok=False`), not a fatal run error. Models often pass the wrong type (e.g. `fields="not-a-dict"`); that should look like a failed tool call so the model can recover, the same way `ToolError` already does. Other exceptions still fail the run.
+
+**Verifier matching.** The verifier pairs each expectation with the first unused matching effect (greedy). That is a deliberate simplification and could mis-pair in contrived overlapping-expectation cases; a bipartite matching would fix that.
+
 **Assumptions I made where the brief was open:**
 - Gate `reason` strings are human-readable audit text; tests assert decision flags, not exact wording (except that a reason is present for reads).
 - Match in the verifier is a subset check on `args`; extra keys like `idempotency_key` do not prevent a match.
@@ -132,11 +136,8 @@ What I chose to test:
 - HTTP: 404 for a missing task, `send_followup` over `POST /runs` returns 201 with a passing verdict
 
 What I deliberately skipped:
-- Exhaustive tests of every seed scenario (`tool_error`, `flaky_provider`, `always_bad_json`, `three_writes` budget gating in the loop)
 - Exact gate `reason` strings
-- Reviewer-rejects path as its own test (the loop handles it; `_ask_reviewer` is provided)
-
-Those would be next if I were tightening coverage, not because the code is untested.
+- `always_bad_json` as its own loop test
 
 ### What was hardest
 
