@@ -21,7 +21,7 @@ from pydantic import ValidationError
 
 from app.autonomy import evaluate_gate
 from app.config import SETTINGS, Settings
-from app.model_client import ModelClient, ModelError, complete_with_retry
+from app.model_client import ModelClient, complete_with_retry
 from app.models import AgentIntent, Effect, Run, Step, Task
 from app.store import Store
 from app.tools import ToolDef, ToolError, Workspace
@@ -233,10 +233,6 @@ def run_agent(run: Run, deps: AgentDeps) -> Run:
             run.status = "failed"
             run.error = "max steps reached without finishing"
 
-    except ModelError as exc:
-        _emit(run, "error", message=str(exc))
-        run.status = "failed"
-        run.error = str(exc)
     except Exception as exc:
         _emit(run, "error", message=str(exc))
         run.status = "failed"

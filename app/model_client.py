@@ -114,5 +114,3 @@ def complete_with_retry(
                 raise
             time.sleep(settings.model_backoff_base_seconds * (2**attempt))
             attempt += 1
-        except FatalError:
-            raise
