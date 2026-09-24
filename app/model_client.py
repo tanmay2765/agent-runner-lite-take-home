@@ -105,4 +105,14 @@ def complete_with_retry(
 
     Write those two tests before you write the function.
     """
-    raise NotImplementedError("complete_with_retry — see TASK 4a")
+    attempt = 0
+    while True:
+        try:
+            return model.complete(messages)
+        except ThrottleError:
+            if attempt >= settings.model_max_retries:
+                raise
+            time.sleep(settings.model_backoff_base_seconds * (2**attempt))
+            attempt += 1
+        except FatalError:
+            raise
