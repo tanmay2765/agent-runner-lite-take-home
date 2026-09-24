@@ -60,4 +60,41 @@ def verify(task: Task, run: Run) -> Verdict:
 
     Write at least the first three before you write the function.
     """
-    raise NotImplementedError("verify — see TASK 2")
+    matched: list = []
+    missing: list = []
+    used_effect_indices: set[int] = set()
+
+    for expected in task.expected_effects:
+        found_index: int | None = None
+        for index, effect in enumerate(run.effects):
+            if index in used_effect_indices:
+                continue
+            if effect.tool != expected.tool:
+                continue
+            if all(effect.args.get(key) == value for key, value in expected.match.items()):
+                found_index = index
+                break
+
+        if found_index is not None:
+            matched.append(expected)
+            used_effect_indices.add(found_index)
+        else:
+            missing.append(expected)
+
+    unexpected = [
+        effect for index, effect in enumerate(run.effects) if index not in used_effect_indices
+    ]
+
+    passed = not missing and not unexpected
+    detail = (
+        f"{len(matched)} matched, {len(missing)} missing, {len(unexpected)} unexpected"
+    )
+
+    return Verdict(
+        passed=passed,
+        matched=matched,
+        missing=missing,
+        unexpected=unexpected,
+        mode=run.autonomy,
+        detail=detail,
+    )
