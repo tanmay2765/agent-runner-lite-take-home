@@ -21,7 +21,7 @@ from pydantic import ValidationError
 
 from app.autonomy import evaluate_gate
 from app.config import SETTINGS, Settings
-from app.model_client import ModelClient, complete_with_retry
+from app.model_client import ModelClient, ModelError, complete_with_retry
 from app.models import AgentIntent, Effect, Run, Step, Task
 from app.store import Store
 from app.tools import ToolDef, ToolError, Workspace
@@ -148,7 +148,104 @@ def run_agent(run: Run, deps: AgentDeps) -> Run:
       - "never_finishes" ends with status "failed" and does not hang
       - "bad_credentials" ends with status "failed" and does not raise out of run_agent
     """
-    raise NotImplementedError("run_agent — see TASK 3")
+    task = deps.store.get_task(run.task_id)
+    if task is None:
+        run.status = "failed"
+        run.error = f"task {run.task_id!r} not found"
+        return run
+
+    messages = initial_messages(task.goal)
+    writes_done = 0
+    run.status = "running"
+
+    try:
+        for _ in range(deps.settings.max_steps):
+            intent = _decide(deps, messages)
+            if intent is None:
+                _emit(run, "error", message="model never produced valid JSON")
+                run.status = "failed"
+                run.error = "model never produced valid JSON"
+                break
+
+            if intent.intent == "final":
+                _emit(run, "final", message=intent.answer or "")
+                run.status = "completed"
+                break
+
+            tool = deps.registry.get(intent.tool or "")
+            if tool is None:
+                result = {"error": f"unknown tool {intent.tool!r}"}
+                _emit(
+                    run,
+                    "tool_result",
+                    tool=intent.tool,
+                    result=result,
+                    ok=False,
+                )
+                messages.append({"role": "user", "content": _observation(result)})
+                continue
+
+            decision = evaluate_gate(
+                run.autonomy,
+                tool.kind,
+                writes_done,
+                deps.settings.max_auto_writes,
+            )
+            _emit(run, "gate", message=decision.reason)
+
+            if decision.requires_approval:
+                approved = _ask_reviewer(task, run, deps)
+                if not approved:
+                    result = {"error": "reviewer rejected the write"}
+                    _emit(
+                        run,
+                        "tool_result",
+                        tool=intent.tool,
+                        result=result,
+                        ok=False,
+                    )
+                    messages.append({"role": "user", "content": _observation(result)})
+                    continue
+
+            result, ok = _execute(tool, intent.args, run, decision.simulate)
+            _emit(run, "tool_call", tool=intent.tool, args=intent.args)
+            _emit(
+                run,
+                "tool_result",
+                tool=intent.tool,
+                result=result,
+                ok=ok,
+            )
+
+            if ok and tool.kind == "write":
+                run.effects.append(
+                    Effect(
+                        tool=intent.tool or tool.name,
+                        args=dict(intent.args),
+                        simulated=decision.simulate,
+                    )
+                )
+                writes_done += 1
+
+            messages.append({"role": "user", "content": _observation(result)})
+        else:
+            _emit(run, "error", message="max steps reached without finishing")
+            run.status = "failed"
+            run.error = "max steps reached without finishing"
+
+    except ModelError as exc:
+        _emit(run, "error", message=str(exc))
+        run.status = "failed"
+        run.error = str(exc)
+    except Exception as exc:
+        _emit(run, "error", message=str(exc))
+        run.status = "failed"
+        run.error = str(exc)
+
+    if run.status == "completed":
+        run.verdict = verify(task, run)
+
+    return run
 
 
 # ─── Provided helpers ─────────────────────────────────────────────────────────────────────────
